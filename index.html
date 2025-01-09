@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>공원 수목 정보</title>
+  <style>
+    /* 기본 스타일 */
+    body {
+      font-family: "맑은 고딕", Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f3f8e6;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      background-color: #88c77b;
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+      width: 100%;
+      border-radius: 0 0 10px 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    nav {
+      display: flex;
+      justify-content: space-around;
+      background-color: #4f9f57;
+      padding: 10px 0;
+      width: 100%;
+    }
+
+    nav button {
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 10px 20px;
+      transition: background 0.3s;
+      border-radius: 5px;
+    }
+
+    nav button:hover {
+      background-color: #3d8043;
+    }
+
+    nav button.active {
+      background-color: #2f6431;
+    }
+
+    main {
+      padding: 20px;
+      width: 100%;
+      max-width: 1000px;
+    }
+
+    #tree-list ul {
+      list-style-type: none;
+      padding: 0;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    #tree-list li {
+      background: #e9f4e4;
+      border: 1px solid #88c77b;
+      border-radius: 10px;
+      margin: 10px 0;
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    #tree-list li button {
+      background-color: #e57373;
+      color: #fff;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      align-self: flex-start;
+    }
+
+    #map {
+      height: 400px;
+      margin-top: 20px;
+      border: 2px solid #88c77b;
+      border-radius: 10px;
+    }
+
+    form {
+      max-width: 400px;
+      margin: auto;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    form input, form textarea, form button {
+      display: block;
+      width: 100%;
+      margin-bottom: 15px;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    form button {
+      background-color: #88c77b;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    form button:hover {
+      background-color: #76b36a;
+    }
+
+    .input-field {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  </style>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBhu8I-xjMG7JZz-fY10FUSxT4YlpfRsFg"></script>
+</head>
+<body>
+  <header>
+    <h1>공원 수목 정보</h1>
+  </header>
+  <nav>
+    <button class="tab-button active" data-tab="tree-list">목록 보기</button>
+    <button class="tab-button" data-tab="tree-map">지도 보기</button>
+    <button class="tab-button" data-tab="tree-form">관리자 메뉴</button>
+  </nav>
+  <main>
+    <!-- 목록 보기 -->
+    <section id="tree-list" class="tab-content active">
+      <input type="text" id="search" placeholder="나무를 검색하세요..." />
+      <ul>
+        <!-- 목록이 동적으로 추가됩니다 -->
+      </ul>
+    </section>
+
+    <!-- 지도 보기 -->
+    <section id="tree-map" class="tab-content" style="display: none;">
+      <div id="map"></div>
+    </section>
+
+    <!-- 관리자 메뉴 -->
+    <section id="tree-form" class="tab-content" style="display: none;">
+      <form>
+        <div class="input-field">
+          <input type="text" id="name" placeholder="나무 이름" required />
+          <input type="text" id="nickname" placeholder="별명" required />
+          <input type="text" id="species" placeholder="종류" required />
+          <textarea id="description" placeholder="특징 설명" required></textarea>
+        </div>
+        <div>
+          <button type="submit">나무 추가</button>
+        </div>
+        <div>
+          <button type="button" onclick="getLocation()">현재 위치 추가</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    // 데이터 저장
+    const trees = [];
+
+    let previousTab = "tree-list"; // 이전 탭 저장
+
+    // 탭 전환
+    const buttons = document.querySelectorAll(".tab-button");
+    const sections = document.querySelectorAll(".tab-content");
+    buttons.forEach(button => {
+      button.addEventListener("click", () => {
+        const tab = button.dataset.tab;
+        
+        // 관리자 메뉴로 이동 시 키 확인
+        if (tab === "tree-form") {
+          const key = prompt("관리 키를 입력하세요:");
+          if (key !== "070207") {
+            alert("관리 키가 잘못되었습니다. 이전 화면으로 돌아갑니다.");
+            return; // 메뉴 전환 중단
+          }
+        }
+
+        // 이전 탭 저장 및 화면 전환
+        previousTab = document.querySelector(".tab-button.active").dataset.tab;
+        buttons.forEach(btn => btn.classList.remove("active"));
+        sections.forEach(sec => (sec.style.display = "none"));
+        button.classList.add("active");
+        document.getElementById(tab).style.display = "block";
+      });
+    });
+
+    // Tree List
+    const treeList = document.querySelector("#tree-list ul");
+    const search = document.getElementById("search");
+
+    function renderTreeList(filter = "") {
+      treeList.innerHTML = "";
+      trees
+        .filter(tree => tree.name.includes(filter) || tree.nickname.includes(filter) || tree.species.includes(filter))
+        .forEach((tree, index) => {
+          const li = document.createElement("li");
+          li.innerHTML = `
+            ${tree.name} (별명: ${tree.nickname}) - 종류: ${tree.species} (나이: ${tree.age}) - ${tree.description}
+            <button onclick="deleteTree(${index})">삭제</button>
+          `;
+          treeList.appendChild(li);
+        });
+    }
+
+    function deleteTree(index) {
+      const key = prompt("관리 키를 입력하세요:");
+      if (key !== "070207") {
+        alert("관리 키가 잘못되었습니다. 삭제가 취소되었습니다.");
+        return;
+      }
+      if (confirm("이 나무를 삭제하시겠습니까?")) {
+        trees.splice(index, 1);
+        renderTreeList(search.value);
+        alert("나무가 삭제되었습니다.");
+      }
+    }
+
+    search.addEventListener("input", () => renderTreeList(search.value));
+    renderTreeList();
+
+    // 지도 보기
+    function initMap() {
+      const center = { lat: 37.7749, lng: 126.4194 };
+      const map = new google.maps.Map(document.getElementById("map"), {
+        zoom: 13,
+        center
+      });
+
+      trees.forEach(tree => {
+        const marker = new google.maps.Marker({
+          position: { lat: tree.lat, lng: tree.lng },
+          map,
+          title: tree.name
+        });
+
+        const infoWindow = new google.maps.InfoWindow({
+          content: `<h3>${tree.name}</h3><p>${tree.description}</p>`
+        });
+
+        marker.addListener("click", () => infoWindow.open(map, marker));
+      });
+    }
+
+    // 관리자 메뉴
+    const treeForm = document.querySelector("#tree-form form");
+
+    treeForm.addEventListener("submit", e => {
+      e.preventDefault();
+      const name = document.getElementById("name").value;
+      const nickname = document.getElementById("nickname").value;
+      const species = document.getElementById("species").value;
+      const description = document.getElementById("description").value;
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(position => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+
+          trees.push({ name, nickname, species, description, lat, lng, age: new Date().getFullYear() - 2000 });
+          alert("나무가 추가되었습니다.");
+          treeForm.reset();
+          renderTreeList();
+        }, () => alert("위치 정보 접근이 거부되었습니다."));
+      } else {
+        alert("이 브라우저는 위치 정보를 지원하지 않습니다.");
+      }
+    });
+
+    // Initialize map on tab click
+    document.querySelector("[data-tab='tree-map']").addEventListener("click", initMap);
+  </script>
+</body>
+</html>
